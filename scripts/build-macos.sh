@@ -2,6 +2,17 @@
 set -eu
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$project_dir"
+# Replacing a signed executable while it runs leaves TCC and the process out of sync.
+if pgrep -x keyscribe >/dev/null; then
+    echo "Закрой Keyscribe перед пересборкой. Для запуска готовой сборки: make run." >&2
+    exit 1
+else
+    process_check=$?
+    if [ "$process_check" -ne 1 ]; then
+        echo "Не удалось проверить запущенные процессы Keyscribe; сборка остановлена." >&2
+        exit 1
+    fi
+fi
 export MACOSX_DEPLOYMENT_TARGET=11.0
 rustup target add aarch64-apple-darwin
 cargo build --release --locked --target aarch64-apple-darwin

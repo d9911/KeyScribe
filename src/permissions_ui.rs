@@ -1,4 +1,4 @@
-use crate::{permissions, App};
+use crate::{guidance::Field, permissions, App};
 use eframe::egui::{self, RichText};
 
 impl App {
@@ -19,19 +19,21 @@ impl App {
                 ui.heading("Разреши управление клавиатурой и мышью");
                 ui.label("Keyscribe нужен доступ macOS «Универсальный доступ» (Accessibility), чтобы отправлять клавиши и движения мыши в выбранное окно.");
                 ui.add_space(8.0);
-                for (label, allowed) in [
-                    ("Универсальный доступ", self.permissions.access.accessibility),
-                    ("Подключение клавиатуры и мыши", self.permissions.access.backend_ready),
-                ] {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.label(label);
-                        ui.label(
-                            RichText::new(if allowed { "Готово" } else { "Не готово" })
-                                .strong()
-                                .color(if allowed { p.accent } else { p.muted }),
-                        );
-                    });
-                }
+                self.guided_field(ui, Field::Permissions, |app, ui| {
+                    for (label, allowed) in [
+                        ("Универсальный доступ", app.permissions.access.accessibility),
+                        ("Подключение клавиатуры и мыши", app.permissions.access.backend_ready),
+                    ] {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(label);
+                            ui.label(
+                                RichText::new(if allowed { "Готово" } else { "Не готово" })
+                                    .strong()
+                                    .color(if allowed { p.accent } else { p.muted }),
+                            );
+                        });
+                    }
+                });
                 ui.add_space(8.0);
                 egui::ScrollArea::vertical()
                     .max_height((ctx.content_rect().height() - 340.0).max(180.0))
@@ -63,9 +65,22 @@ impl App {
                         egui::CollapsingHeader::new("Уже включено, но после пересборки не работает?")
                             .default_open(true)
                             .show(ui, |ui| {
-                                ui.label("1. В настройках Accessibility выключи и снова включи Keyscribe.");
-                                ui.label("2. Если доступа всё ещё нет, удали старую запись Keyscribe и добавь текущую копию приложения кнопкой «+». Затем перезапусти Keyscribe и проверь ещё раз.");
-                                ui.small("Локальная ad hoc подпись может измениться при пересборке. Старая запись в списке не подтверждает доступ новой сборке.");
+                                ui.label("После перемещения или пересборки macOS может хранить разрешение для старого пути или подписи. Включённая галочка тогда не подтверждает доступ текущей копии.");
+                                if ui.button("Сбросить старое разрешение…").clicked() {
+                                    self.permissions.reset_confirmation = true;
+                                }
+                                if self.permissions.reset_confirmation {
+                                    ui.label("Будет сброшено только разрешение Accessibility приложения local.keyscribe.desktop (Keyscribe). Права других приложений не меняются. После сброса нужно снова включить Keyscribe в настройках и перезапустить приложение.");
+                                    ui.horizontal_wrapped(|ui| {
+                                        if ui.button("Подтвердить сброс Keyscribe").clicked() {
+                                            self.permissions.reset_access();
+                                        }
+                                        if ui.button("Отмена").clicked() {
+                                            self.permissions.reset_confirmation = false;
+                                        }
+                                    });
+                                }
+                                ui.small("Вручную: удали старую запись Keyscribe кнопкой «−», добавь текущую Keyscribe.app через «+» и перезапусти её. Путь показан ниже.");
                             });
                         if let Some(path) = permissions::application_path() {
                             ui.add_space(6.0);
@@ -84,11 +99,15 @@ impl App {
                 ui.add_space(10.0);
                 ui.separator();
                 ui.label(RichText::new("До подтверждения доступа запуск всех режимов заблокирован. Статус проверяется автоматически; выполнение само не начинается.").small().color(p.muted));
-                if ui.add_enabled(self.permissions.access.allowed(), egui::Button::new("Продолжить").min_size(egui::vec2(150.0, 36.0))).clicked()
-                    && self.permissions.confirm()
-                {
-                    self.ready = false;
-                    self.status = "Доступ macOS подтверждён. Проверь настройки перед запуском.".into();
+                if ui.add(egui::Button::new("Продолжить").min_size(egui::vec2(150.0, 36.0))).clicked() {
+                    if self.permissions.confirm() {
+                        self.ready = false;
+                        self.guidance.point_to(self.next_required_field());
+                        self.status = "Доступ macOS подтверждён. Заполни подсвеченный пункт перед запуском.".into();
+                    } else {
+                        self.guidance.point_to(Some(Field::Permissions));
+                        self.permissions.notice = Some("Доступ ещё не подтверждён. Выполни шаг в подсвеченном блоке и проверь ещё раз.".into());
+                    }
                 }
             });
     }

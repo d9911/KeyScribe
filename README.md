@@ -82,6 +82,12 @@ when pasting into its local editor; it does not paste into the target applicatio
 
 ## Quick start
 
+If a required choice is missing, clicking a start button scrolls to it and shows
+a rounded red outline with an explanation. The outline pulses three times, then
+stays visible until the field is completed. Guidance moves to the next missing
+choice. Continue in the access dialog also points to the next setup step.
+Completing the fields never starts input automatically.
+
 1. Open the application built using the platform instructions below.
 2. Paste text into the Keyscribe editor using Cmd+V or Ctrl+V.
 3. Select **where Keyscribe runs**: macOS / Citrix from Mac or Windows / Citrix
@@ -248,15 +254,21 @@ is required by the app. It offers **Запросить доступ** (Request),
 (Open settings), **Проверить ещё раз** (Recheck) and **Показать в Finder** (Reveal
 the current app). Enable Keyscribe in **System Settings → Privacy & Security →
 Accessibility**. Status refreshes automatically, on return to the app and before
-starting. Continue stays disabled until macOS reports access; it never starts a
-job automatically. Reopen the dialog using **Доступ macOS** in the header.
+starting. Continue rechecks access; if denied, the dialog stays open and highlights
+the permission block. It never starts a job automatically. Reopen the dialog using **Доступ macOS** in the header.
 Revoking access cancels the active job. macOS may suppress repeated system
 prompts; use Open settings in that case.
 
-If the old Keyscribe entry is enabled after a rebuild but checks fail, toggle it
-off and on. If that does not help, remove the stale entry, add the current `.app`
-using `+`, and relaunch. The dialog shows its exact path. Keyscribe never resets
-TCC or grants its own permissions. With
+Close Keyscribe before rebuilding: the build script refuses to replace a running
+app. If access fails after moving or rebuilding despite an enabled switch, select
+**Сбросить старое разрешение…** in the dialog and confirm. Keyscribe registers its
+current path with LaunchServices, then runs only
+`/usr/bin/tccutil reset Accessibility local.keyscribe.desktop`. Other applications'
+permissions are unchanged. It requests access again and opens settings. Enable the
+current copy and relaunch; if missing, add its `.app` using `+`. The dialog shows
+the path and a Finder button. Alternatively, remove the old entry and add the
+current app manually. Reset requires explicit confirmation and never grants access
+automatically. With
 `cargo run`, permission may belong to the terminal or binary; for regular use,
 launch the `.app` from a stable location. The default ad hoc signing requirement
 is tied to the code hash and may change after rebuilding. With an existing stable

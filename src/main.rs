@@ -6,6 +6,7 @@ compile_error!("Keyscribe currently supports macOS and Windows only");
 mod appearance;
 mod automation_ui;
 mod desktop;
+mod guidance;
 mod permissions;
 mod permissions_ui;
 mod typing_setup;
@@ -55,6 +56,7 @@ struct App {
     hold_ms: u64,
     switch_delay_ms: u64,
     ready: bool,
+    guidance: guidance::Guidance,
     cancel: Arc<AtomicBool>,
     focused: Arc<AtomicBool>,
     session: Option<Session>,
@@ -148,6 +150,7 @@ impl App {
             hold_ms: 25,
             switch_delay_ms: 400,
             ready: false,
+            guidance: guidance::Guidance::default(),
             cancel,
             focused: Arc::new(AtomicBool::new(true)),
             session: None,
@@ -169,8 +172,15 @@ impl App {
         if !self.permissions.can_start() {
             self.permissions.dialog_open = true;
             self.ready = false;
+            self.guidance.point_to(Some(guidance::Field::Permissions));
             return;
         }
+        if let Some(field) = self.next_required_field() {
+            self.guidance.point_to(Some(field));
+            self.status = "Заполни подсвеченный блок, затем нажми запуск ещё раз.".into();
+            return;
+        }
+        self.guidance.point_to(None);
         let job = match self.automation.mode {
             Mode::Text => {
                 let layout = match self.typing_setup.validate_text(self.auto_switch) {

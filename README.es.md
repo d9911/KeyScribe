@@ -82,6 +82,12 @@ local; Keyscribe no pega en la aplicación de destino.
 
 ## Inicio rápido
 
+Si falta una opción obligatoria, al pulsar iniciar se desplaza la vista hasta ella
+y aparece un borde rojo redondeado con una explicación. El borde pulsa tres veces
+y permanece hasta completar el campo; después señala la siguiente opción pendiente.
+Continuar en el diálogo de permisos también señala el siguiente paso. Completar
+los campos nunca inicia acciones automáticamente.
+
 1. Abre la aplicación compilada siguiendo las instrucciones de tu plataforma.
 2. Pega el texto en Keyscribe con Cmd+V o Ctrl+V.
 3. Selecciona **dónde se ejecuta Keyscribe**: macOS / Citrix desde Mac o Windows /
@@ -246,15 +252,21 @@ una conexión de Enigo sin enviar eventos; la app no exige otro permiso de enví
 Tiene botones para solicitar acceso, abrir ajustes, comprobar de
 nuevo y mostrar la copia actual en Finder. Activa Keyscribe en **Ajustes del
 Sistema → Privacidad y seguridad → Accesibilidad**. Se comprueba automáticamente,
-al regresar y antes de iniciar. Continuar solo se habilita cuando macOS confirma
-el acceso; nunca inicia acciones automáticamente. Puedes abrirlo de nuevo desde
+al regresar y antes de iniciar. Continuar vuelve a comprobar el acceso; si falta,
+el diálogo permanece abierto y resalta el bloque de permisos. Nunca inicia acciones automáticamente. Puedes abrirlo de nuevo desde
 **Доступ macOS** en la cabecera. Revocar el permiso cancela la tarea activa.
 Si macOS no muestra otra solicitud, abre los ajustes con el botón del diálogo.
 
-Si la entrada antigua está activada pero las comprobaciones fallan tras recompilar,
-desactívala y actívala. Si no funciona, elimina la entrada antigua, añade el `.app`
-actual con `+` y reinicia. El diálogo muestra su ruta exacta. Keyscribe no borra
-TCC ni concede sus propios permisos. Con
+Cierra Keyscribe antes de recompilar: el script no sustituye una app en ejecución.
+Si el acceso falla después de mover o recompilar aunque el interruptor esté activo,
+pulsa **Сбросить старое разрешение…** en el diálogo y confirma. Keyscribe registra
+su ubicación actual en LaunchServices y ejecuta únicamente
+`/usr/bin/tccutil reset Accessibility local.keyscribe.desktop`. No cambia permisos
+de otras aplicaciones. Solicita acceso de nuevo y abre los ajustes. Activa la copia
+actual y reiníciala; si falta la entrada, añade su `.app` con `+`. El diálogo muestra
+la ruta y el botón de Finder. También puedes eliminar la entrada antigua y añadir
+la actual manualmente. El restablecimiento exige confirmación explícita y nunca
+concede acceso automáticamente. Con
 `cargo run`, el permiso puede pertenecer al terminal o al ejecutable; para el uso
 habitual abre el `.app` desde una ubicación estable. El requisito de la firma ad
 hoc predeterminada depende del hash y puede cambiar al recompilar. Si dispones

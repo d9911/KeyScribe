@@ -1,6 +1,7 @@
 use crate::{
     appearance::{self, Theme},
     automation_ui::Mode,
+    guidance::Field,
     typing_setup::Environment,
     App,
 };
@@ -13,6 +14,7 @@ use std::sync::atomic::Ordering;
 
 impl App {
     pub(crate) fn show_workspace(&mut self, ctx: &egui::Context, running: bool) {
+        self.follow_guidance();
         let p = self.theme.palette();
         egui::TopBottomPanel::top("header")
             .frame(
@@ -101,6 +103,7 @@ impl App {
                         if response.clicked() && !active {
                             self.automation.mode = mode;
                             self.ready = false;
+                            self.guidance.point_to(None);
                             self.automation.capture_target = None;
                             self.automation.capture_deadline = None;
                             self.sent = 0;
@@ -182,7 +185,7 @@ impl App {
                     ui.horizontal_top(|ui| {
                         ui.vertical(|ui| {
                             ui.set_width(editor_width);
-                            self.show_editor(ui);
+                            self.guided_field(ui, Field::Text, |app, ui| app.show_editor(ui));
                         });
                         ui.add_space(8.0);
                         ui.vertical(|ui| {
@@ -191,7 +194,7 @@ impl App {
                         });
                     });
                 } else {
-                    self.show_editor(ui);
+                    self.guided_field(ui, Field::Text, |app, ui| app.show_editor(ui));
                     ui.add_space(10.0);
                     self.show_text_settings(ui);
                 }
@@ -302,7 +305,7 @@ impl App {
             self.ready = false;
         }
         if self.auto_switch {
-            self.show_switch_settings(ui);
+            self.guided_field(ui, Field::Shortcut, |app, ui| app.show_switch_settings(ui));
         }
         egui::CollapsingHeader::new("Настройки Citrix на Mac").show(ui, |ui| {
             ui.small("Режим Scancode, синхронизация Don't sync. Сочетание должно менять язык внутри сессии.");
@@ -311,40 +314,44 @@ impl App {
 
     fn show_input_context(&mut self, ui: &mut egui::Ui) {
         appearance::section(ui, "Окружение и язык", "Выбери перед запуском");
-        ui.label("Где работает Keyscribe");
-        let previous = self.typing_setup.environment;
-        let mut environment = previous;
-        egui::ComboBox::from_id_salt("input-environment")
-            .selected_text(environment.map_or("Выбери окружение…", Environment::label))
-            .show_ui(ui, |ui| {
-                for value in [Environment::MacOs, Environment::Windows] {
-                    ui.selectable_value(&mut environment, Some(value), value.label());
+        self.guided_field(ui, Field::Environment, |app, ui| {
+            ui.label("Где работает Keyscribe");
+            let previous = app.typing_setup.environment;
+            let mut environment = previous;
+            egui::ComboBox::from_id_salt("input-environment")
+                .selected_text(environment.map_or("Выбери окружение…", Environment::label))
+                .show_ui(ui, |ui| {
+                    for value in [Environment::MacOs, Environment::Windows] {
+                        ui.selectable_value(&mut environment, Some(value), value.label());
+                    }
+                });
+            if environment != previous {
+                if let Some(environment) = environment {
+                    app.typing_setup.select_environment(environment);
                 }
-            });
-        if environment != previous {
-            if let Some(environment) = environment {
-                self.typing_setup.select_environment(environment);
-            }
-            self.ready = false;
-        }
-        ui.add_space(6.0);
-        ui.label("Текущий язык в целевом окне / Citrix");
-        ui.horizontal_wrapped(|ui| {
-            for (layout, label) in [
-                (Layout::Us, "English US"),
-                (Layout::Russian, "Русская ЙЦУКЕН"),
-            ] {
-                if ui
-                    .selectable_value(&mut self.typing_setup.initial_layout, Some(layout), label)
-                    .changed()
-                {
-                    self.ready = false;
-                }
+                app.ready = false;
             }
         });
-        if self.typing_setup.initial_layout.is_none() {
-            ui.small("Язык не выбран. Проверь его в целевом окне и укажи здесь.");
-        }
+        ui.add_space(6.0);
+        self.guided_field(ui, Field::Language, |app, ui| {
+            ui.label("Текущий язык в целевом окне / Citrix");
+            ui.horizontal_wrapped(|ui| {
+                for (layout, label) in [
+                    (Layout::Us, "English US"),
+                    (Layout::Russian, "Русская ЙЦУКЕН"),
+                ] {
+                    if ui
+                        .selectable_value(&mut app.typing_setup.initial_layout, Some(layout), label)
+                        .changed()
+                    {
+                        app.ready = false;
+                    }
+                }
+            });
+            if app.typing_setup.initial_layout.is_none() {
+                ui.small("Язык не выбран. Проверь его в целевом окне и укажи здесь.");
+            }
+        });
         ui.small("Раскладки целевого окна: English US и Windows ЙЦУКЕН. Профиль задаёт сочетание, но не меняет настройки системы.");
     }
 
@@ -445,26 +452,27 @@ impl App {
                 ui.label(RichText::new(error).small().color(p.muted));
             }
         }
-        ui.add_enabled_ui(!running && context_error.is_none() && self.permissions.can_start(), |ui| {
-            ui.checkbox(&mut self.ready, match self.automation.mode {
-                Mode::Text if self.auto_switch => "В Citrix только US и RU; начальная раскладка верна, переключение проверено, Caps Lock выключен",
-                Mode::Text => "Раскладка в Citrix выбрана верно, Caps Lock выключен",
-                Mode::Mouse => "Область вокруг курсора будет внутри нужного окна",
-                Mode::Cycle => "Окружение, текущий язык, шаги, число повторов и координаты проверены",
+        self.guided_field(ui, Field::Confirmation, |app, ui| {
+            ui.add_enabled_ui(!running && context_error.is_none() && app.permissions.can_start(), |ui| {
+                ui.checkbox(&mut app.ready, match app.automation.mode {
+                    Mode::Text if app.auto_switch => "В Citrix только US и RU; начальная раскладка верна, переключение проверено, Caps Lock выключен",
+                    Mode::Text => "Раскладка в Citrix выбрана верно, Caps Lock выключен",
+                    Mode::Mouse => "Область вокруг курсора будет внутри нужного окна",
+                    Mode::Cycle => "Окружение, текущий язык, шаги, число повторов и координаты проверены",
+                });
             });
         });
-        if let Some(error) = &self.hotkey_error {
-            ui.colored_label(ui.visuals().error_fg_color, error);
+        if self.hotkey_error.is_some() {
+            self.guided_field(ui, Field::Hotkey, |app, ui| {
+                if let Some(error) = &app.hotkey_error {
+                    ui.colored_label(ui.visuals().error_fg_color, error);
+                }
+            });
         }
         ui.horizontal(|ui| {
             if ui
                 .add_enabled(
-                    !running
-                        && self.permissions.can_start()
-                        && context_error.is_none()
-                        && self.ready
-                        && (self.automation.mode != Mode::Text || !self.text.is_empty())
-                        && self.hotkeys.is_some(),
+                    !running,
                     egui::Button::new(
                         RichText::new(match self.automation.mode {
                             Mode::Text => "Начать набор",
