@@ -1,0 +1,5 @@
+Keyscribe test: Aa Bb Zz 0123456789
+! @ # $ % ^ & * ( ) - _ = +
+[ ] { } ; : ' " , . < > / ? \ | ` ~
+    Four spaces, then text.
+End of sample.

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Keyscribe</title>
+  <desc>A cream keyboard key with a forest green K and mint text cursor.</desc>
+  <defs>
+    <linearGradient id="case" x1="100" y1="70" x2="900" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#376b5e"/>
+      <stop offset=".28" stop-color="#1e4439"/>
+      <stop offset=".76" stop-color="#102e26"/>
+      <stop offset="1" stop-color="#0a211b"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="150" y1="60" x2="850" y2="970" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#97c2ac" stop-opacity=".65"/>
+      <stop offset=".32" stop-color="#326b57" stop-opacity=".12"/>
+      <stop offset=".82" stop-color="#06251d" stop-opacity=".7"/>
+      <stop offset="1" stop-color="#56816c" stop-opacity=".4"/>
+    </linearGradient>
+    <linearGradient id="key-side" x1="320" y1="220" x2="670" y2="810" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffdf0"/>
+      <stop offset=".48" stop-color="#e9e2cc"/>
+      <stop offset=".84" stop-color="#beb398"/>
+      <stop offset="1" stop-color="#92866f"/>
+    </linearGradient>
+    <linearGradient id="key-face" x1="360" y1="260" x2="660" y2="710" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffdf1"/>
+      <stop offset=".58" stop-color="#f4efdd"/>
+      <stop offset="1" stop-color="#e7dfc8"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="390" y1="340" x2="590" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#102f26"/>
+      <stop offset="1" stop-color="#214e3e"/>
+    </linearGradient>
+    <linearGradient id="cursor" x1="645" y1="360" x2="676" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39865d"/>
+      <stop offset=".45" stop-color="#87dfa5"/>
+      <stop offset="1" stop-color="#55b77d"/>
+    </linearGradient>
+    <filter id="key-shadow" x="-.3" y="-.3" width="1.6" height="1.7" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#00160f" flood-opacity=".8"/>
+    </filter>
+    <filter id="face-shadow" x="-.2" y="-.2" width="1.4" height="1.5" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#887b60" flood-opacity=".4"/>
+    </filter>
+  </defs>
+  <rect x="60" y="60" width="904" height="904" rx="166" fill="url(#case)"/>
+  <rect x="65" y="65" width="894" height="894" rx="161" fill="none" stroke="url(#rim)" stroke-width="9"/>
+  <path d="M226 325Q228 215 330 211H691Q789 211 797 317L813 726Q817 799 737 805H276Q203 802 207 728Z"
+        fill="url(#key-side)" stroke="#f5efdb" stroke-opacity=".3" stroke-width="2" filter="url(#key-shadow)"/>
+  <rect x="278" y="248" width="461" height="445" rx="64" fill="url(#key-face)" filter="url(#face-shadow)"/>
+  <path d="M343 249H674Q737 249 737 312" fill="none" stroke="#fffef4" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+  <path d="M370 345Q363 345 363 353V591Q363 599 371 599H411Q419 599 419 591V519L444 492Q448 488 452 494L519 592Q524 599 532 599H589Q600 599 594 590L499 458Q495 452 500 447L586 358Q597 345 583 345H532Q525 345 519 351L424 447Q419 452 419 445V353Q419 345 411 345Z"
+        fill="url(#letter)" stroke="#fffdf0" stroke-opacity=".7" stroke-width="3"/>
+  <rect x="645" y="345" width="33" height="254" rx="16.5" fill="url(#cursor)" stroke="#fdfbea" stroke-width="3"/>
+</svg>

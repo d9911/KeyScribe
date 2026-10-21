@@ -1,0 +1,20 @@
+[package]
+name = "keyscribe"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Type text into a focused desktop window using physical keyboard events"
+publish = false
+
+[dependencies]
+eframe = { version = "0.33.3", default-features = false, features = ["default_fonts", "glow"] }
+enigo = { version = "0.6.1", default-features = false }
+global-hotkey = "0.9.0"
+getrandom = "0.4.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10.1"
+
+[profile.release]
+lto = "thin"
+strip = true
