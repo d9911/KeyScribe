@@ -124,7 +124,7 @@ impl App {
                             .color(p.muted),
                     );
                     ui.separator();
-                    ui.label(RichText::new("Ctrl + Alt + F12").monospace().size(12.0));
+                    ui.label(RichText::new(crate::STOP_LABEL).monospace().size(12.0));
                     ui.label(RichText::new("Быстрая остановка").size(12.0).strong());
                 });
             });
@@ -321,7 +321,12 @@ impl App {
             egui::ComboBox::from_id_salt("input-environment")
                 .selected_text(environment.map_or("Выбери окружение…", Environment::label))
                 .show_ui(ui, |ui| {
-                    for value in [Environment::MacOs, Environment::Windows] {
+                    for value in [
+                        Environment::MacOs,
+                        Environment::Windows,
+                        #[cfg(target_os = "linux")]
+                        Environment::Linux,
+                    ] {
                         ui.selectable_value(&mut environment, Some(value), value.label());
                     }
                 });
@@ -505,7 +510,7 @@ impl App {
             ui.vertical(|ui| {
                 ui.label(RichText::new(&self.status).strong());
                 ui.label(
-                    RichText::new("Стоп из любого окна: Ctrl + Alt + F12")
+                    RichText::new(format!("Стоп из любого окна: {}", crate::STOP_LABEL))
                         .size(12.0)
                         .color(p.muted),
                 );

@@ -70,7 +70,7 @@ impl Cycle {
                 Step::Wait(ms) => (10..=3_600_000).contains(ms),
             };
             if !valid {
-                return Err(format!("Некорректный шаг {}. Проверь клавишу, координаты или паузу. Ctrl+Alt+F11/F12 зарезервированы приложением.", index + 1));
+                return Err(format!("Некорректный шаг {}. Проверь клавишу, координаты или паузу. {} зарезервированы приложением.", index + 1, crate::shortcut::RESERVED_LABEL));
             }
         }
         Ok(())

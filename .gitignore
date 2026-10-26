@@ -3,3 +3,34 @@
 .DS_Store
 Icon
 Icon[[:cntrl:]]
+
+/build/
+__pycache__/
+.ruff_cache/
+.mypy_cache/
+
+# Local Python environments, credentials and code-signing material
+/.venv/
+.env
+.env.*
+.env-*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Machine-local IDE and OS metadata; keep shared VS Code settings
+/.idea/
+/*.iml
+.vscode/*.local.json
+._*
+desktop.ini
+Thumbs.db
+*.swp
+*.swo
+*~

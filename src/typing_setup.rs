@@ -4,6 +4,8 @@ use keyscribe::{keyboard::Layout, shortcut::Shortcut};
 pub(crate) enum Environment {
     MacOs,
     Windows,
+    #[cfg(target_os = "linux")]
+    Linux,
 }
 
 impl Environment {
@@ -11,6 +13,8 @@ impl Environment {
         match self {
             Self::MacOs => "macOS / Citrix с Mac",
             Self::Windows => "Windows / Citrix с Windows",
+            #[cfg(target_os = "linux")]
+            Self::Linux => "Linux X11 / Citrix с Linux",
         }
     }
 }
@@ -30,6 +34,8 @@ impl TypingSetup {
             self.shortcut = match environment {
                 Environment::MacOs => Shortcut::CTRL_OPTION_SPACE,
                 Environment::Windows => Shortcut::WIN_SPACE,
+                #[cfg(target_os = "linux")]
+                Environment::Linux => Shortcut::CTRL_SHIFT,
             };
         }
     }
@@ -44,7 +50,11 @@ impl TypingSetup {
     pub(crate) fn validate_text(&self, auto_switch: bool) -> Result<Layout, &'static str> {
         let layout = self.validate_context()?;
         if auto_switch && !self.shortcut.is_valid() {
-            return Err("Выбери сочетание из минимум двух клавиш с модификатором. Ctrl+Alt+F11/F12 зарезервированы приложением.");
+            return Err(if cfg!(target_os = "linux") {
+                "Выбери сочетание из минимум двух клавиш с модификатором. Ctrl+Shift+F11/F12 и Ctrl+Alt+F11/F12 зарезервированы."
+            } else {
+                "Выбери сочетание из минимум двух клавиш с модификатором. Ctrl+Alt+F11/F12 зарезервированы приложением."
+            });
         }
         Ok(layout)
     }

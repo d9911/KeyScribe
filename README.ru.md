@@ -346,3 +346,8 @@ Denis Gutsuliak · [d9911.org](https://d9911.org).
 Полные условия приведены в [LICENSE](LICENSE).
 
 [![License](https://img.shields.io/badge/license-see_LICENSE-blue)](LICENSE)
+
+
+## Установщики и Ubuntu X11
+
+Добавлены `make setup`, `make doctor`, `make local`, PowerShell без GNU Make, DMG/Windows setup/DEB. Актуальные требования, сочетания остановки для Linux и границы проверки: [INSTALLERS.md](docs/INSTALLERS.md). Этот раздел дополняет прежнее описание сборки только для macOS/Windows.

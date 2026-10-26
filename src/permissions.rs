@@ -271,7 +271,16 @@ mod platform {
     pub(super) fn check() -> Access {
         Access {
             accessibility: true,
-            backend_ready: true,
+            backend_ready: {
+                #[cfg(target_os = "linux")]
+                {
+                    crate::linux_input::ensure_session().is_ok()
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    true
+                }
+            },
         }
     }
 

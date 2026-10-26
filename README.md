@@ -346,3 +346,8 @@ Denis Gutsuliak · [d9911.org](https://d9911.org).
 Read the complete terms in [LICENSE](LICENSE).
 
 [![License](https://img.shields.io/badge/license-see_LICENSE-blue)](LICENSE)
+
+
+## Native installers and Ubuntu X11
+
+Updated packaging: `make setup`, `make doctor`, `make build`, `make local`, `make run`; Windows also has `./package.ps1`. Ubuntu X11 input and DEB packaging are added. See [INSTALLERS.md](docs/INSTALLERS.md) for current prerequisites, platform-specific emergency shortcuts and verification limits; this updates the earlier macOS/Windows-only packaging description.

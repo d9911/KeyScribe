@@ -344,3 +344,8 @@ Denis Gutsuliak · [d9911.org](https://d9911.org).
 Consulta las condiciones completas en [LICENSE](LICENSE).
 
 [![License](https://img.shields.io/badge/license-see_LICENSE-blue)](LICENSE)
+
+
+## Instaladores y Ubuntu X11
+
+Comandos: `make setup`, `make doctor`, `make local`; PowerShell sin GNU Make. Consulte [INSTALLERS.md](docs/INSTALLERS.md) para DMG, Windows setup, DEB, atajos de emergencia de Linux y límites de verificación.

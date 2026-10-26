@@ -257,7 +257,9 @@ impl AutomationUi {
                                 ui.label("Y:");
                                 changed |=
                                     ui.add(egui::DragValue::new(y).range(0..=30000)).changed();
-                                if ui.button("Взять координаты: Ctrl+Alt+F11").clicked()
+                                if ui
+                                    .button(format!("Взять координаты: {}", crate::CAPTURE_LABEL))
+                                    .clicked()
                                 {
                                     self.capture_target = Some(index);
                                     self.capture_deadline = None;
@@ -316,7 +318,7 @@ impl AutomationUi {
             changed = true;
         }
         if let Some(index) = self.capture_target {
-            ui.label(format!("Для шага {}: наведи курсор на нужную точку в целевом окне и нажми Ctrl+Alt+F11. Выполнение сценария при этом не начинается.", index + 1));
+            ui.label(format!("Для шага {}: наведи курсор на нужную точку в целевом окне и нажми {}. Выполнение сценария при этом не начинается.", index + 1, crate::CAPTURE_LABEL));
         }
         if let Some(deadline) = self.capture_deadline {
             ui.label(format!(

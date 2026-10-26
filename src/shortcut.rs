@@ -1,6 +1,19 @@
 use crate::keyboard::Stroke;
 use std::fmt;
 
+#[cfg(target_os = "linux")]
+pub const STOP_LABEL: &str = "Ctrl+Shift+F12\nCtrl+Shift+Pause";
+#[cfg(not(target_os = "linux"))]
+pub const STOP_LABEL: &str = "Ctrl + Alt + F12";
+#[cfg(target_os = "linux")]
+pub const CAPTURE_LABEL: &str = "Ctrl+Shift+F11";
+#[cfg(not(target_os = "linux"))]
+pub const CAPTURE_LABEL: &str = "Ctrl+Alt+F11";
+#[cfg(target_os = "linux")]
+pub const RESERVED_LABEL: &str = "Ctrl+Shift+F11/F12 и Ctrl+Alt+F11/F12";
+#[cfg(not(target_os = "linux"))]
+pub const RESERVED_LABEL: &str = "Ctrl+Alt+F11/F12";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Modifier {
     Control,
@@ -216,7 +229,9 @@ impl Shortcut {
     }
 
     pub fn is_reserved(self) -> bool {
-        self.control && self.alt && matches!(self.trigger, Some(Trigger::Function(11 | 12)))
+        self.control
+            && (self.alt || (cfg!(target_os = "linux") && self.shift))
+            && matches!(self.trigger, Some(Trigger::Function(11 | 12)))
     }
 }
 

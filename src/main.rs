@@ -1,7 +1,11 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-compile_error!("Keyscribe currently supports macOS and Windows only");
+#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+compile_error!("Keyscribe supports macOS, Windows and Linux/X11");
+
+mod installer_lock;
+#[cfg(target_os = "linux")]
+mod linux_input;
 
 mod appearance;
 mod automation_ui;
@@ -20,6 +24,7 @@ use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState,
 };
 use keyscribe::keyboard::{prepare_plan, Action, Layout};
+use keyscribe::shortcut::{CAPTURE_LABEL, STOP_LABEL};
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -28,8 +33,11 @@ use std::{
     time::{Duration, Instant},
 };
 use typing_setup::TypingSetup;
+const STOP_HOTKEY_COUNT: usize = if cfg!(target_os = "linux") { 8 } else { 4 };
 
 fn main() -> eframe::Result {
+    let _installation_lock = installer_lock::acquire("local.keyscribe.desktop")
+        .map_err(|error| eframe::Error::AppCreation(Box::new(error)))?;
     eframe::run_native(
         "Keyscribe",
         eframe::NativeOptions {
@@ -67,7 +75,7 @@ struct App {
     capture_signal: Arc<AtomicBool>,
     capture_hotkey: HotKey,
     capture_error: Option<String>,
-    stop_hotkeys: [HotKey; 4],
+    stop_hotkeys: [HotKey; STOP_HOTKEY_COUNT],
     hotkeys: Option<GlobalHotKeyManager>,
     hotkey_error: Option<String>,
 }
@@ -90,24 +98,28 @@ impl App {
             egui::TextureOptions::LINEAR,
         );
         let cancel = Arc::new(AtomicBool::new(false));
-        let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::F12);
+        let (primary, extra) = if cfg!(target_os = "linux") {
+            (Modifiers::CONTROL | Modifiers::SHIFT, Modifiers::ALT)
+        } else {
+            (Modifiers::CONTROL | Modifiers::ALT, Modifiers::SHIFT)
+        };
+        let hotkey = HotKey::new(Some(primary), Code::F12);
         let stop_hotkeys = [
             hotkey,
-            HotKey::new(
-                Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT),
-                Code::F12,
-            ),
-            HotKey::new(
-                Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::META),
-                Code::F12,
-            ),
-            HotKey::new(
-                Some(Modifiers::CONTROL | Modifiers::ALT | Modifiers::SHIFT | Modifiers::META),
-                Code::F12,
-            ),
+            HotKey::new(Some(primary | extra), Code::F12),
+            HotKey::new(Some(primary | Modifiers::META), Code::F12),
+            HotKey::new(Some(primary | extra | Modifiers::META), Code::F12),
+            #[cfg(target_os = "linux")]
+            HotKey::new(Some(primary), Code::Pause),
+            #[cfg(target_os = "linux")]
+            HotKey::new(Some(primary | extra), Code::Pause),
+            #[cfg(target_os = "linux")]
+            HotKey::new(Some(primary | Modifiers::META), Code::Pause),
+            #[cfg(target_os = "linux")]
+            HotKey::new(Some(primary | extra | Modifiers::META), Code::Pause),
         ];
         let stop_ids = stop_hotkeys.map(|hotkey| hotkey.id());
-        let capture_hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::F11);
+        let capture_hotkey = HotKey::new(Some(primary), Code::F11);
         let capture_signal = Arc::new(AtomicBool::new(false));
         let callback_capture = Arc::clone(&capture_signal);
         let worker_cancel = Arc::clone(&cancel);
@@ -134,9 +146,9 @@ impl App {
         });
         let (hotkeys, hotkey_error) = match manager {
             Ok(manager) => (Some(manager), None),
-            Err(error) => (None, Some(format!("Не удалось включить Ctrl+Alt+F12: {error}. Закрой другой экземпляр Keyscribe или приложение, занявшее сочетание, и перезапусти Keyscribe."))),
+            Err(error) => (None, Some(format!("Не удалось включить {STOP_LABEL}: {error}. Закрой другой экземпляр Keyscribe или приложение, занявшее сочетание, и перезапусти Keyscribe."))),
         };
-        let capture_error = hotkeys.as_ref().and_then(|manager| manager.register(capture_hotkey).err().map(|error| format!("Не удалось включить захват Ctrl+Alt+F11: {error}. Координаты можно ввести вручную.")));
+        let capture_error = hotkeys.as_ref().and_then(|manager| manager.register(capture_hotkey).err().map(|error| format!("Не удалось включить захват {CAPTURE_LABEL}: {error}. Координаты можно ввести вручную.")));
         Self {
             brand_icon,
             theme,
@@ -154,7 +166,18 @@ impl App {
             cancel,
             focused: Arc::new(AtomicBool::new(true)),
             session: None,
-            status: "Готово к вводу текста".into(),
+            status: {
+                #[cfg(target_os = "linux")]
+                {
+                    linux_input::ensure_session()
+                        .err()
+                        .unwrap_or_else(|| "Готово к вводу текста · X11".into())
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    "Готово к вводу текста".into()
+                }
+            },
             sent: 0,
             total: 0,
             progress_caption: "Отправлено нажатий",
@@ -168,6 +191,11 @@ impl App {
     }
 
     fn start(&mut self) {
+        #[cfg(target_os = "linux")]
+        if let Err(message) = linux_input::ensure_session() {
+            self.status = message;
+            return;
+        }
         self.permissions.refresh();
         if !self.permissions.can_start() {
             self.permissions.dialog_open = true;

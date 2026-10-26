@@ -46,6 +46,8 @@ pub enum Job {
 }
 
 pub fn cursor_position() -> Result<(i32, i32), String> {
+    #[cfg(target_os = "linux")]
+    crate::linux_input::ensure_session()?;
     if !crate::permissions::current_access().allowed() {
         return Err(
             "macOS не разрешает доступ к вводу. Открой окно «Доступ macOS» в Keyscribe.".into(),
@@ -88,6 +90,8 @@ impl Session {
         let worker_cancel = Arc::clone(&cancel);
         let handle = thread::Builder::new().name("keyscribe-input".into()).spawn(move || {
             let run = || -> Result<(), String> {
+                #[cfg(target_os = "linux")]
+                crate::linux_input::ensure_session()?;
                 // Preflight again at the OS boundary. Only the access dialog may request permission.
                 let denied = || { let _ = sender.send(Status::AccessDenied("macOS не разрешает управление клавиатурой и мышью этой копии Keyscribe. Проверь доступ в открывшемся окне.".into())); };
                 if !crate::permissions::current_access().allowed() {
@@ -98,7 +102,11 @@ impl Session {
                     open_prompt_to_get_permissions: false,
                     ..Settings::default()
                 }) {
-                    Ok(input) => NativeKeyboard(input),
+                    Ok(input) => NativeKeyboard {
+                        input,
+                        #[cfg(target_os = "linux")]
+                        keys: crate::linux_input::KeyboardMap::load()?,
+                    },
                     Err(enigo::NewConError::NoPermission) => {
                         denied();
                         return Ok(());
@@ -198,7 +206,11 @@ fn wait(duration: Duration, cancel: &AtomicBool, focused: Option<&AtomicBool>) -
     }
 }
 
-struct NativeKeyboard(Enigo);
+struct NativeKeyboard {
+    input: Enigo,
+    #[cfg(target_os = "linux")]
+    keys: crate::linux_input::KeyboardMap,
+}
 
 impl KeyboardSink for NativeKeyboard {
     type Error = enigo::InputError;
@@ -210,10 +222,10 @@ impl KeyboardSink for NativeKeyboard {
             Modifier::Shift => Key::Shift,
             #[cfg(target_os = "macos")]
             Modifier::Meta => Key::Other(0x36), // Right Command: Citrix maps it to Windows.
-            #[cfg(target_os = "windows")]
+            #[cfg(any(target_os = "windows", target_os = "linux"))]
             Modifier::Meta => Key::Meta,
         };
-        self.0.key(
+        self.input.key(
             key,
             if pressed {
                 Direction::Press
@@ -237,7 +249,7 @@ impl KeyboardSink for NativeKeyboard {
             0xe051 => Some(Key::PageDown),
             _ => None,
         } {
-            return self.0.key(
+            return self.input.key(
                 key,
                 if pressed {
                     Direction::Press
@@ -250,7 +262,9 @@ impl KeyboardSink for NativeKeyboard {
         let code = stroke.mac;
         #[cfg(target_os = "windows")]
         let code = stroke.windows;
-        self.0.raw(
+        #[cfg(target_os = "linux")]
+        let code = self.keys.code(stroke.windows)?;
+        self.input.raw(
             code,
             if pressed {
                 Direction::Press
@@ -269,7 +283,7 @@ impl PointerSink for NativeKeyboard {
             MouseButton::Right => Button::Right,
             MouseButton::Middle => Button::Middle,
         };
-        self.0.button(
+        self.input.button(
             button,
             if pressed {
                 Direction::Press
@@ -299,7 +313,7 @@ impl cycle::Driver for Runtime<'_> {
             Step::Wait(ms) => return Ok(self.pause(*ms)),
             Step::Move { x, y } => {
                 self.input
-                    .0
+                    .input
                     .move_mouse(*x, *y, Coordinate::Abs)
                     .map_err(|e| e.to_string())?;
                 true
@@ -318,7 +332,7 @@ impl cycle::Driver for Runtime<'_> {
                 double,
             } => {
                 self.input
-                    .0
+                    .input
                     .move_mouse(*x, *y, Coordinate::Abs)
                     .map_err(|e| e.to_string())?;
                 if !self.active() {
@@ -354,7 +368,7 @@ fn run_cycle(
     sender: &mpsc::Sender<Status>,
 ) -> Result<(), String> {
     config.validate()?;
-    let (width, height) = input.0.main_display().map_err(|e| e.to_string())?;
+    let (width, height) = input.input.main_display().map_err(|e| e.to_string())?;
     for (index, step) in config.steps.iter().enumerate() {
         if let Step::Click { x, y, .. } | Step::Move { x, y } = step {
             if *x >= width || *y >= height {
@@ -405,8 +419,8 @@ fn run_motion(
     sender: &mpsc::Sender<Status>,
 ) -> Result<(), String> {
     config.validate()?;
-    let display = input.0.main_display().map_err(|e| e.to_string())?;
-    let (x, y) = input.0.location().map_err(|e| e.to_string())?;
+    let display = input.input.main_display().map_err(|e| e.to_string())?;
+    let (x, y) = input.input.location().map_err(|e| e.to_string())?;
     let bounds = Bounds::around(Point { x, y }, config.radius_x, config.radius_y, display)?;
     let started = Instant::now();
     let deadline = if config.until_stopped {
@@ -426,7 +440,7 @@ fn run_motion(
     let mut random = SystemRandom;
     let mut moves = 0;
     'movement: while alive() {
-        let (x, y) = input.0.location().map_err(|e| e.to_string())?;
+        let (x, y) = input.input.location().map_err(|e| e.to_string())?;
         let current = Point { x, y };
         if !bounds.contains(current) {
             let _ = sender.send(Status::Stopped(started.elapsed().as_secs() as usize));
@@ -438,7 +452,7 @@ fn run_motion(
                 break 'movement;
             }
             input
-                .0
+                .input
                 .move_mouse(point.x, point.y, Coordinate::Abs)
                 .map_err(|e| e.to_string())?;
         }
